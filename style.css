@@ -68,11 +68,13 @@ body {
 /* Joystick Styles */
 .joystick-container {
     position: absolute;
-    bottom: 40px;
+    bottom: 10vh;
+    width: 150px;
+    height: 150px;
 }
 
 .joystick-container.left {
-    left: 40px;
+    left: 5vw;
 }
 
 .joystick-base {
@@ -130,13 +132,26 @@ body {
 /* Landscape optimization for mobile */
 @media screen and (max-height: 500px) {
     .joystick-container {
-        bottom: 20px;
+        bottom: 5vh;
     }
     
     .joystick-container.left {
-        left: 20px;
+        left: 3vw;
     }
     
+    .joystick-base {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .joystick-stick {
+        width: 40px;
+        height: 40px;
+    }
+}
+
+/* Small screens */
+@media screen and (max-width: 480px) {
     .joystick-base {
         width: 100px;
         height: 100px;

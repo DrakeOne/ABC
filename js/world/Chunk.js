@@ -9,6 +9,8 @@ export class Chunk {
         this.size = WORLD_CONSTANTS.CHUNK_SIZE;
         this.height = WORLD_CONSTANTS.WORLD_HEIGHT;
         
+        console.log(`[Chunk] Creating chunk at (${x}, ${z})`);
+        
         // 3D array to store block data
         // Using Uint8Array for memory efficiency
         this.blocks = new Uint8Array(this.size * this.height * this.size);
@@ -25,23 +27,26 @@ export class Chunk {
     
     // Generate a flat world with grass
     generateFlatTerrain() {
+        console.log(`[Chunk] Generating flat terrain for chunk (${this.x}, ${this.z})`);
+        
         const groundLevel = 64; // Standard Minecraft sea level
+        let blockCount = 0;
         
         for (let x = 0; x < this.size; x++) {
             for (let z = 0; z < this.size; z++) {
-                for (let y = 0; y < this.height; y++) {
-                    if (y < groundLevel - 3) {
-                        this.setBlock(x, y, z, BLOCK_TYPES.STONE.id);
-                    } else if (y < groundLevel) {
-                        this.setBlock(x, y, z, BLOCK_TYPES.DIRT.id);
-                    } else if (y === groundLevel) {
-                        this.setBlock(x, y, z, BLOCK_TYPES.GRASS.id);
-                    } else {
-                        this.setBlock(x, y, z, BLOCK_TYPES.AIR.id);
-                    }
+                // Only generate a single layer of grass for debugging
+                this.setBlock(x, groundLevel, z, BLOCK_TYPES.GRASS.id);
+                blockCount++;
+                
+                // Add some variety for testing
+                if ((x + z) % 4 === 0 && x > 0 && z > 0 && x < this.size - 1 && z < this.size - 1) {
+                    this.setBlock(x, groundLevel + 1, z, BLOCK_TYPES.STONE.id);
+                    blockCount++;
                 }
             }
         }
+        
+        console.log(`[Chunk] Generated ${blockCount} blocks in chunk (${this.x}, ${this.z})`);
     }
     
     // Get block at local chunk coordinates
@@ -92,6 +97,7 @@ export class Chunk {
     
     // Clean up meshes
     dispose() {
+        console.log(`[Chunk] Disposing chunk (${this.x}, ${this.z})`);
         this.meshes.forEach(mesh => {
             if (mesh.geometry) mesh.geometry.dispose();
             mesh.parent?.remove(mesh);
@@ -104,10 +110,22 @@ export class Chunk {
         this.dispose();
         this.meshes = meshes;
         this.isDirty = false;
+        console.log(`[Chunk] Set ${meshes.length} meshes for chunk (${this.x}, ${this.z})`);
     }
     
     // Get chunk key for mapping
     static getKey(x, z) {
         return `${x},${z}`;
+    }
+    
+    // Debug method to count non-air blocks
+    getBlockCount() {
+        let count = 0;
+        for (let i = 0; i < this.blocks.length; i++) {
+            if (this.blocks[i] !== BLOCK_TYPES.AIR.id) {
+                count++;
+            }
+        }
+        return count;
     }
 }

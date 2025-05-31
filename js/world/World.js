@@ -12,25 +12,35 @@ export class World {
         // Map to store loaded chunks
         this.chunks = new Map();
         
-        // Current render distance
-        this.renderDistance = WORLD_CONSTANTS.INITIAL_RENDER_DISTANCE;
+        // Current render distance (reduced for debugging)
+        this.renderDistance = 1; // Only load nearby chunks
         
         // Player position for chunk loading
         this.playerChunkX = 0;
         this.playerChunkZ = 0;
+        
+        // Stats
+        this.totalBlocks = 0;
+        
+        console.log('[World] World initialized');
     }
     
     // Initialize world with chunks around spawn
     initialize() {
+        console.log('[World] Initializing world...');
         this.loadChunksAroundPlayer();
     }
     
     // Load chunks around the player position
     loadChunksAroundPlayer() {
+        console.log(`[World] Loading chunks around player at chunk (${this.playerChunkX}, ${this.playerChunkZ})`);
+        
         const startX = this.playerChunkX - this.renderDistance;
         const endX = this.playerChunkX + this.renderDistance;
         const startZ = this.playerChunkZ - this.renderDistance;
         const endZ = this.playerChunkZ + this.renderDistance;
+        
+        let chunksLoaded = 0;
         
         // Load new chunks
         for (let x = startX; x <= endX; x++) {
@@ -38,47 +48,40 @@ export class World {
                 const key = Chunk.getKey(x, z);
                 if (!this.chunks.has(key)) {
                     this.loadChunk(x, z);
+                    chunksLoaded++;
                 }
             }
         }
         
-        // Unload distant chunks
-        this.unloadDistantChunks();
+        console.log(`[World] Loaded ${chunksLoaded} new chunks. Total chunks: ${this.chunks.size}`);
+        
+        // Don't unload chunks for now (debugging)
+        // this.unloadDistantChunks();
     }
     
     // Load a single chunk
     loadChunk(x, z) {
+        console.log(`[World] Loading chunk at (${x}, ${z})`);
+        
         const chunk = new Chunk(x, z);
         const key = Chunk.getKey(x, z);
         this.chunks.set(key, chunk);
         
         // Generate mesh for the chunk
         this.updateChunkMesh(chunk);
-    }
-    
-    // Unload chunks that are too far from the player
-    unloadDistantChunks() {
-        const maxDistance = this.renderDistance + 1;
         
-        for (const [key, chunk] of this.chunks) {
-            const dx = Math.abs(chunk.x - this.playerChunkX);
-            const dz = Math.abs(chunk.z - this.playerChunkZ);
-            
-            if (dx > maxDistance || dz > maxDistance) {
-                this.unloadChunk(key, chunk);
-            }
-        }
-    }
-    
-    // Unload a single chunk
-    unloadChunk(key, chunk) {
-        chunk.dispose();
-        this.chunks.delete(key);
+        // Update total blocks
+        this.totalBlocks += chunk.getBlockCount();
     }
     
     // Update chunk mesh (when blocks change or chunk loads)
     updateChunkMesh(chunk) {
-        if (!chunk.isDirty) return;
+        if (!chunk.isDirty) {
+            console.log(`[World] Chunk (${chunk.x}, ${chunk.z}) is not dirty, skipping mesh update`);
+            return;
+        }
+        
+        console.log(`[World] Updating mesh for chunk (${chunk.x}, ${chunk.z})`);
         
         // Remove old meshes
         chunk.meshes.forEach(mesh => {
@@ -94,6 +97,8 @@ export class World {
         });
         
         chunk.setMeshes(meshes);
+        
+        console.log(`[World] Added ${meshes.length} meshes to scene for chunk (${chunk.x}, ${chunk.z})`);
     }
     
     // Update player position and load/unload chunks as needed
@@ -102,6 +107,7 @@ export class World {
         const chunkZ = Math.floor(worldZ / WORLD_CONSTANTS.CHUNK_SIZE);
         
         if (chunkX !== this.playerChunkX || chunkZ !== this.playerChunkZ) {
+            console.log(`[World] Player moved to chunk (${chunkX}, ${chunkZ})`);
             this.playerChunkX = chunkX;
             this.playerChunkZ = chunkZ;
             this.loadChunksAroundPlayer();
@@ -123,53 +129,18 @@ export class World {
         return chunk.getBlock(localX, worldY, localZ);
     }
     
-    // Set block at world coordinates
-    setBlock(worldX, worldY, worldZ, blockId) {
-        const chunkX = Math.floor(worldX / WORLD_CONSTANTS.CHUNK_SIZE);
-        const chunkZ = Math.floor(worldZ / WORLD_CONSTANTS.CHUNK_SIZE);
-        const key = Chunk.getKey(chunkX, chunkZ);
-        
-        const chunk = this.chunks.get(key);
-        if (!chunk) return;
-        
-        const localX = worldX - chunkX * WORLD_CONSTANTS.CHUNK_SIZE;
-        const localZ = worldZ - chunkZ * WORLD_CONSTANTS.CHUNK_SIZE;
-        
-        chunk.setBlock(localX, worldY, localZ, blockId);
-        
-        // Update chunk mesh
-        this.updateChunkMesh(chunk);
-        
-        // Check if we need to update neighboring chunks (for face culling)
-        this.updateNeighboringChunks(worldX, worldY, worldZ, chunkX, chunkZ);
-    }
-    
-    // Update neighboring chunks if block is on chunk border
-    updateNeighboringChunks(worldX, worldY, worldZ, chunkX, chunkZ) {
-        const localX = worldX - chunkX * WORLD_CONSTANTS.CHUNK_SIZE;
-        const localZ = worldZ - chunkZ * WORLD_CONSTANTS.CHUNK_SIZE;
-        
-        // Check each border
-        if (localX === 0) {
-            const neighbor = this.chunks.get(Chunk.getKey(chunkX - 1, chunkZ));
-            if (neighbor) this.updateChunkMesh(neighbor);
-        }
-        if (localX === WORLD_CONSTANTS.CHUNK_SIZE - 1) {
-            const neighbor = this.chunks.get(Chunk.getKey(chunkX + 1, chunkZ));
-            if (neighbor) this.updateChunkMesh(neighbor);
-        }
-        if (localZ === 0) {
-            const neighbor = this.chunks.get(Chunk.getKey(chunkX, chunkZ - 1));
-            if (neighbor) this.updateChunkMesh(neighbor);
-        }
-        if (localZ === WORLD_CONSTANTS.CHUNK_SIZE - 1) {
-            const neighbor = this.chunks.get(Chunk.getKey(chunkX, chunkZ + 1));
-            if (neighbor) this.updateChunkMesh(neighbor);
-        }
+    // Get world stats for debugging
+    getStats() {
+        return {
+            chunks: this.chunks.size,
+            blocks: this.totalBlocks,
+            meshes: this.meshGenerator.getBlockCount()
+        };
     }
     
     // Clean up all chunks
     dispose() {
+        console.log('[World] Disposing world...');
         for (const chunk of this.chunks.values()) {
             chunk.dispose();
         }

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Voxel Game - Minecraft Style</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- Mobile Controls -->
+        <div id="mobile-controls" class="mobile-controls hidden">
+            <!-- Movement Joystick -->
+            <div id="movement-joystick" class="joystick-container left">
+                <div class="joystick-base">
+                    <div class="joystick-stick" id="movement-stick"></div>
+                </div>
+            </div>
+            
+            <!-- Look Area -->
+            <div id="look-area" class="look-area right"></div>
+        </div>
+        
+        <!-- Instructions -->
+        <div id="instructions" class="instructions">
+            <p class="desktop-instructions">Click to start - WASD to move, Mouse to look</p>
+            <p class="mobile-instructions hidden">Use left joystick to move, right side to look</p>
+        </div>
+    </div>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

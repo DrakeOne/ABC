@@ -31,9 +31,20 @@ export class MobileControls {
         this.joystickRadius = 60; // Half of the base size
         this.joystickCenter = { x: 0, y: 0 };
         
+        // Debug
+        this.debugInfo = {
+            touchCount: 0,
+            joystickActive: false,
+            lookActive: false,
+            moveX: 0,
+            moveY: 0
+        };
+        
         // Setup
         this.setupEventListeners();
         this.updateJoystickCenter();
+        
+        console.log('[MobileControls] Initialized');
     }
     
     setupEventListeners() {
@@ -57,6 +68,7 @@ export class MobileControls {
                 x: rect.left + rect.width / 2,
                 y: rect.top + rect.height / 2
             };
+            console.log('[MobileControls] Joystick center updated:', this.joystickCenter);
         }
     }
     
@@ -74,15 +86,21 @@ export class MobileControls {
                 touch.clientY <= joystickRect.bottom && 
                 !this.joystickTouch) {
                 this.joystickTouch = touch.identifier;
+                this.debugInfo.joystickActive = true;
                 this.handleJoystickMove(touch);
+                console.log('[MobileControls] Joystick touch started');
             }
             // Check if touch is in look area
             else if (this.isTouchInLookArea(touch) && !this.lookTouch) {
                 this.lookTouch = touch.identifier;
+                this.debugInfo.lookActive = true;
                 this.lastLookX = touch.clientX;
                 this.lastLookY = touch.clientY;
+                console.log('[MobileControls] Look touch started');
             }
         }
+        
+        this.debugInfo.touchCount = this.touches.size;
     }
     
     onTouchMove(event) {
@@ -107,11 +125,17 @@ export class MobileControls {
             
             if (touch.identifier === this.joystickTouch) {
                 this.joystickTouch = null;
+                this.debugInfo.joystickActive = false;
                 this.resetJoystick();
+                console.log('[MobileControls] Joystick touch ended');
             } else if (touch.identifier === this.lookTouch) {
                 this.lookTouch = null;
+                this.debugInfo.lookActive = false;
+                console.log('[MobileControls] Look touch ended');
             }
         }
+        
+        this.debugInfo.touchCount = this.touches.size;
     }
     
     isTouchInLookArea(touch) {
@@ -142,8 +166,13 @@ export class MobileControls {
         if (distance > this.joystickRadius * WORLD_CONSTANTS.JOYSTICK_DEAD_ZONE) {
             this.moveVector.x = limitedX / this.joystickRadius;
             this.moveVector.y = -limitedY / this.joystickRadius; // Invert Y for forward/backward
+            
+            this.debugInfo.moveX = this.moveVector.x.toFixed(2);
+            this.debugInfo.moveY = this.moveVector.y.toFixed(2);
         } else {
             this.moveVector.set(0, 0);
+            this.debugInfo.moveX = 0;
+            this.debugInfo.moveY = 0;
         }
     }
     
@@ -169,6 +198,8 @@ export class MobileControls {
     resetJoystick() {
         this.joystickStick.style.transform = 'translate(-50%, -50%)';
         this.moveVector.set(0, 0);
+        this.debugInfo.moveX = 0;
+        this.debugInfo.moveY = 0;
     }
     
     update(deltaTime) {
@@ -187,6 +218,11 @@ export class MobileControls {
             movement.addScaledVector(right, this.moveVector.x * this.movementSpeed * deltaTime);
             
             this.camera.position.add(movement);
+            
+            // Debug log movement
+            if (Math.abs(movement.x) > 0.01 || Math.abs(movement.z) > 0.01) {
+                console.log(`[MobileControls] Moving: x=${movement.x.toFixed(3)}, z=${movement.z.toFixed(3)}`);
+            }
         }
     }
     
@@ -196,6 +232,10 @@ export class MobileControls {
     
     setPosition(x, y, z) {
         this.camera.position.set(x, y, z);
+    }
+    
+    getDebugInfo() {
+        return this.debugInfo;
     }
     
     dispose() {

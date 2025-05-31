@@ -22,6 +22,7 @@ export class MobileControls {
         this.lookTouch = null;
         
         // UI Elements
+        this.joystickContainer = document.querySelector('.joystick-container');
         this.joystickBase = document.querySelector('.joystick-base');
         this.joystickStick = document.getElementById('movement-stick');
         this.lookArea = document.getElementById('look-area');
@@ -65,8 +66,13 @@ export class MobileControls {
         for (const touch of event.changedTouches) {
             this.touches.set(touch.identifier, touch);
             
-            // Check if touch is on joystick
-            if (this.isTouchOnJoystick(touch) && !this.joystickTouch) {
+            // Check if touch is on joystick area (more generous hit detection)
+            const joystickRect = this.joystickContainer.getBoundingClientRect();
+            if (touch.clientX >= joystickRect.left && 
+                touch.clientX <= joystickRect.right && 
+                touch.clientY >= joystickRect.top && 
+                touch.clientY <= joystickRect.bottom && 
+                !this.joystickTouch) {
                 this.joystickTouch = touch.identifier;
                 this.handleJoystickMove(touch);
             }
@@ -108,12 +114,6 @@ export class MobileControls {
         }
     }
     
-    isTouchOnJoystick(touch) {
-        const dx = touch.clientX - this.joystickCenter.x;
-        const dy = touch.clientY - this.joystickCenter.y;
-        return Math.sqrt(dx * dx + dy * dy) <= this.joystickRadius * 1.5; // Slightly larger hit area
-    }
-    
     isTouchInLookArea(touch) {
         const rect = this.lookArea.getBoundingClientRect();
         return touch.clientX >= rect.left && 
@@ -135,13 +135,13 @@ export class MobileControls {
         const limitedX = Math.cos(angle) * limitedDistance;
         const limitedY = Math.sin(angle) * limitedDistance;
         
-        // Update stick position
-        this.joystickStick.style.transform = `translate(${limitedX}px, ${limitedY}px)`;
+        // Update stick position (relative to center)
+        this.joystickStick.style.transform = `translate(-50%, -50%) translate(${limitedX}px, ${limitedY}px)`;
         
         // Calculate movement vector (normalized to -1 to 1)
         if (distance > this.joystickRadius * WORLD_CONSTANTS.JOYSTICK_DEAD_ZONE) {
             this.moveVector.x = limitedX / this.joystickRadius;
-            this.moveVector.y = -limitedY / this.joystickRadius; // Invert Y
+            this.moveVector.y = -limitedY / this.joystickRadius; // Invert Y for forward/backward
         } else {
             this.moveVector.set(0, 0);
         }
@@ -167,7 +167,7 @@ export class MobileControls {
     }
     
     resetJoystick() {
-        this.joystickStick.style.transform = 'translate(0, 0)';
+        this.joystickStick.style.transform = 'translate(-50%, -50%)';
         this.moveVector.set(0, 0);
     }
     
@@ -177,6 +177,7 @@ export class MobileControls {
             const forward = new THREE.Vector3(0, 0, -1);
             const right = new THREE.Vector3(1, 0, 0);
             
+            // Only apply Y rotation (no X rotation for movement)
             forward.applyEuler(new THREE.Euler(0, this.rotation.y, 0));
             right.applyEuler(new THREE.Euler(0, this.rotation.y, 0));
             
